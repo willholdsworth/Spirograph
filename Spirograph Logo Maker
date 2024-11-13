@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spirograph Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700&family=Roboto:wght@100;300;400;500;700&family=Playfair+Display:wght@400&family=Montserrat:wght@100;200;400;500;600;700&family=Open+Sans:wght@300;400;600&family=Josefin+Slab:wght@400&family=Lato:wght@100;300;400;700&family=Roboto+Slab:wght@400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid black;
+            margin-bottom: 20px; /* Add margin to separate canvas from controls */
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            margin: 20px;
+            max-width: 300px; /* Limit the width of the controls */
+        }
+        .controls label, .controls input, .controls select, .controls button {
+            margin-bottom: 10px;
+            width: 100%; /* Ensure the inputs are full-width within the controls */
+        }
+        .text-controls {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="spirographCanvas" width="500" height="500"></canvas>
+    
+    <div class="controls">
+        <label for="letter">Letter:</label>
+        <input type="text" id="letter" value="o" oninput="drawSpirograph()">
+        
+        <label for="font">Font:</label>
+        <select id="font" onchange="updateFontWeights()">
+            <option value="Poppins">Poppins</option>
+            <option value="Roboto">Roboto</option>
+            <option value="Playfair Display">Playfair Display</option>
+            <option value="Montserrat">Montserrat</option>
+            <option value="Open Sans">Open Sans</option>
+            <option value="Josefin Slab">Josefin Slab</option>
+            <option value="Lato">Lato</option>
+            <option value="Roboto Slab">Roboto Slab</option>
+        </select>
+
+        <label for="fontWeight">Font Weight:</label>
+        <select id="fontWeight" onchange="drawSpirograph()">
+            <!-- Font weights will be populated based on the selected font -->
+        </select>
+
+        <label for="diameter">Diameter:</label>
+        <input type="number" id="diameter" value="33" oninput="drawSpirograph()">
+
+        <label for="circleSize">Letter Size:</label>
+        <input type="number" id="circleSize" value="93" oninput="drawSpirograph()">
+
+        <label for="numberOfLetters">Number of Letters Around Circle:</label>
+        <input type="number" id="numberOfLetters" value="10" min="1" oninput="drawSpirograph()">
+
+        <label for="concentricCircles">Number of Concentric Circles:</label>
+        <input type="number" id="concentricCircles" value="1" min="1" oninput="drawSpirograph()">
+
+        <label for="spacing">Spacing Between Concentric Circles:</label>
+        <input type="number" id="spacing" value="10" oninput="drawSpirograph()">
+
+        <label for="rotation">Rotation:</label>
+        <input type="range" id="rotationSlider" min="0" max="360" value="183" oninput="updateRotationFromSlider()">
+        <input type="number" id="rotation" min="0" max="360" value="183" oninput="updateRotationFromInput()">
+
+        <label for="rotationOffset">Rotation Offset:</label>
+        <input type="range" id="rotationOffsetSlider" min="-360" max="360" value="0" oninput="updateRotationOffsetFromSlider()">
+        <input type="number" id="rotationOffset" value="0" oninput="drawSpirograph()">
+
+        <div class="text-controls">
+            <label for="topText">Top Text:</label>
+            <input type="text" id="topText" value="THE" oninput="drawSpirograph()">
+            <label for="topTextSize">Top Text Size:</label>
+            <input type="number" id="topTextSize" value="15" oninput="drawSpirograph()">
+            <label for="topTextXOffset">Top Text X Offset:</label>
+            <input type="number" id="topTextXOffset" value="0" oninput="drawSpirograph()">
+            <label for="topTextYOffset">Top Text Y Offset:</label>
+            <input type="number" id="topTextYOffset" value="94" oninput="drawSpirograph()">
+            
+            <label for="bottomText">Bottom Text:</label>
+            <input type="text" id="bottomText" value="ALLIANCE" oninput="drawSpirograph()">
+            <label for="bottomTextSize">Bottom Text Size:</label>
+            <input type="number" id="bottomTextSize" value="21" oninput="drawSpirograph()">
+            <label for="bottomTextXOffset">Bottom Text X Offset:</label>
+            <input type="number" id="bottomTextXOffset" value="0" oninput="drawSpirograph()">
+            <label for="bottomTextYOffset">Bottom Text Y Offset:</label>
+            <input type="number" id="bottomTextYOffset" value="114" oninput="drawSpirograph()">
+        </div>
+        
+        <button onclick="downloadSVG()">Download as SVG</button>
+    </div>
+
+    <script>
+        const fontWeights = {
+            'Poppins': [100, 200, 300, 400, 500, 600, 700],
+            'Roboto': [100, 300, 400, 500, 700],
+            'Playfair Display': [400],
+            'Montserrat': [100, 200, 400, 500, 600, 700],
+            'Open Sans': [300, 400, 600],
+            'Josefin Slab': [400],
+            'Lato': [100, 300, 400, 700],
+            'Roboto Slab': [400]
+        };
+
+        function updateFontWeights() {
+            const fontSelect = document.getElementById('font');
+            const fontWeightSelect = document.getElementById('fontWeight');
+            const selectedFont = fontSelect.value;
+
+            // Clear the previous options
+            fontWeightSelect.innerHTML = '';
+
+            // Get the available weights for the selected font
+            const weights = fontWeights[selectedFont];
+
+            // Populate the font weight dropdown
+            weights.forEach(weight => {
+                const option = document.createElement('option');
+                option.value = weight;
+                option.textContent = weight;
+                fontWeightSelect.appendChild(option);
+            });
+
+            // Set default weight
+            fontWeightSelect.value = weights[0];
+            drawSpirograph();
+        }
+
+        function updateRotationFromSlider() {
+            const slider = document.getElementById('rotationSlider');
+            const input = document.getElementById('rotation');
+            input.value = slider.value;
+            drawSpirograph();
+        }
+
+        function updateRotationFromInput() {
+            const input = document.getElementById('rotation');
+            const slider = document.getElementById('rotationSlider');
+            slider.value = input.value;
+            drawSpirograph();
+        }
+
+        function updateRotationOffsetFromSlider() {
+            const slider = document.getElementById('rotationOffsetSlider');
+            const input = document.getElementById('rotationOffset');
+            input.value = slider.value;
+            drawSpirograph();
+        }
+
+        function drawSpirograph() {
+            const canvas = document.getElementById('spirographCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const letterInput = document.getElementById('letter').value || 'o'; // Default to 'o'
+            const font = document.getElementById('font').value;
+            const fontWeight = document.getElementById('fontWeight').value;
+            
+            const diameter = parseInt(document.getElementById('diameter').value);
+            const circleSize = parseInt(document.getElementById('circleSize').value);
+            const rotation = parseInt(document.getElementById('rotation').value) * Math.PI / 180; // Convert to radians
+            const rotationOffset = parseInt(document.getElementById('rotationOffset').value) * Math.PI / 180; // Convert to radians
+            const spacing = parseInt(document.getElementById('spacing').value);
+            const concentricCircles = parseInt(document.getElementById('concentricCircles').value);
+            const numberOfLetters = parseInt(document.getElementById('numberOfLetters').value);
+
+            const topText = document.getElementById('topText').value;
+            const topTextSize = parseInt(document.getElementById('topTextSize').value);
+            const topTextXOffset = parseInt(document.getElementById('topTextXOffset').value);
+            const topTextYOffset = parseInt(document.getElementById('topTextYOffset').value);
+            
+            const bottomText = document.getElementById('bottomText').value;
+            const bottomTextSize = parseInt(document.getElementById('bottomTextSize').value);
+            const bottomTextXOffset = parseInt(document.getElementById('bottomTextXOffset').value);
+            const bottomTextYOffset = parseInt(document.getElementById('bottomTextYOffset').value);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            // Split letters for concentric circles
+            const letters = letterInput.split('');
+
+            // Draw each letter in its concentric circle
+            for (let j = 0; j < concentricCircles; j++) {
+                const currentDiameter = diameter + j * spacing;
+
+                // Draw each letter around the circle
+                for (let i = 0; i < numberOfLetters; i++) { // Draw letters based on the input
+                    const angle = (i / numberOfLetters) * 2 * Math.PI; // Evenly distribute letters
+                    const x = centerX + currentDiameter * Math.cos(angle + rotationOffset * j); // Apply the rotation offset for each circle
+                    const y = centerY + currentDiameter * Math.sin(angle + rotationOffset * j); // Apply the rotation offset for each circle
+
+                    // Draw the letter at each position
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(angle + rotation); // Rotate letters towards the center and apply rotation
+                    ctx.font = `${fontWeight} ${circleSize}px ${font}`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = "black";
+                    ctx.fillText(letters[i % letters.length], 0, 0); // Use modulo to loop through the letters
+                    ctx.restore();
+                }
+            }
+
+            // Draw Top Text
+            ctx.save();
+            ctx.font = `${topTextSize}px 'Century'`;
+            ctx.textAlign = "center";
+            ctx.fillText(topText, centerX + topTextXOffset, centerY + topTextYOffset);
+            ctx.restore();
+
+            // Draw Bottom Text
+            ctx.save();
+            ctx.font = `${bottomTextSize}px 'Century'`;
+            ctx.textAlign = "center";
+            ctx.fillText(bottomText, centerX + bottomTextXOffset, centerY + bottomTextYOffset);
+            ctx.restore();
+        }
+
+        function downloadSVG() {
+            const canvas = document.getElementById('spirographCanvas');
+            const svgContent = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}">
+                    <style>
+                        @font-face {
+                            font-family: 'Poppins';
+                            src: url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700');
+                        }
+                    </style>
+                    ${getSVGPaths()}
+                </svg>
+            `;
+            const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'spirograph.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function getSVGPaths() {
+            const letterInput = document.getElementById('letter').value || 'o'; // Default to 'o'
+            const font = document.getElementById('font').value;
+            const diameter = parseInt(document.getElementById('diameter').value);
+            const circleSize = parseInt(document.getElementById('circleSize').value);
+            const spacing = parseInt(document.getElementById('spacing').value);
+            const topText = document.getElementById('topText').value;
+            const topTextSize = parseInt(document.getElementById('topTextSize').value);
+            const bottomText = document.getElementById('bottomText').value;
+            const bottomTextSize = parseInt(document.getElementById('bottomTextSize').value);
+            const fontWeight = document.getElementById('fontWeight').value;
+            const rotationOffset = parseInt(document.getElementById('rotationOffset').value) * Math.PI / 180; // Convert to radians
+            const rotation = parseInt(document.getElementById('rotation').value) * Math.PI / 180; // Convert to radians
+            const concentricCircles = parseInt(document.getElementById('concentricCircles').value);
+            const numberOfLetters = parseInt(document.getElementById('numberOfLetters').value);
+
+            let paths = '';
+            const centerX = 250; // Half of canvas width
+            const centerY = 250; // Half of canvas height
+
+            // Split letters for concentric circles
+            const letters = letterInput.split('');
+
+            for (let j = 0; j < concentricCircles; j++) {
+                const currentDiameter = diameter + j * spacing;
+
+                // Draw each letter around the circle
+                for (let i = 0; i < numberOfLetters; i++) { // Draw letters based on the input
+                    const angle = (i / numberOfLetters) * 2 * Math.PI; // Evenly distribute letters
+                    const x = centerX + currentDiameter * Math.cos(angle + rotationOffset); // Apply the rotation offset for each circle
+                    const y = centerY + currentDiameter * Math.sin(angle + rotationOffset); // Apply the rotation offset for each circle
+
+                    // Add the letter to the SVG at each position
+                    paths += `<text x="${x}" y="${y}" font-size="${circleSize}" text-anchor="middle" dominant-baseline="middle" fill="black" font-family="${font}" font-weight="${fontWeight}" transform="rotate(${(angle + rotation) * (180 / Math.PI)}, ${x}, ${y})">${letters[i % letters.length]}</text>`;
+                }
+            }
+
+            // Add Top Text to SVG
+            paths += `<text x="${centerX + parseInt(document.getElementById('topTextXOffset').value)}" y="${centerY + parseInt(document.getElementById('topTextYOffset').value)}" font-size="${topTextSize}" text-anchor="middle" dominant-baseline="middle" fill="black" font-family="Century">${topText}</text>`;
+            
+            // Add Bottom Text to SVG
+            paths += `<text x="${centerX + parseInt(document.getElementById('bottomTextXOffset').value)}" y="${centerY + parseInt(document.getElementById('bottomTextYOffset').value)}" font-size="${bottomTextSize}" text-anchor="middle" dominant-baseline="middle" fill="black" font-family="Century">${bottomText}</text>`;
+
+            return paths;
+        }
+
+        // Initial draw
+        updateFontWeights(); // Populate font weights on load
+        drawSpirograph();
+    </script>
+</body>
+</html>
